@@ -1,7 +1,6 @@
 import os
 import numpy as np
 import argparse
-import matplotlib.pyplot as plt
 
 from keras import backend as K
 from keras import callbacks
@@ -11,8 +10,6 @@ from keras.utils import to_categorical, multi_gpu_model
 
 from data_generator import AFLWFaceRegionsSequence
 from utils import plot_log
-
-K.set_image_data_format('channels_last')
 
 def Conv1x1(filters, strides, name, inputs):
     Conv2D(filters=filters, kernel_size=(1, 1), strides=strides, padding='valid', use_bias=False, name=name)(inputs)
@@ -104,11 +101,11 @@ def ResNet101(input_shape):
     #fc_pose     = Dense(512, activation = 'relu', name = 'fc_pose')(flatten)
     #fc_gender   = Dense(512, activation = 'relu', name = 'fc_gender')(flatten)
 
-    out_detect  = Dense(1, activation = 'softmax', name = 'out_detect')(fc_detect)
+    out_detect  = Dense(2, activation = 'softmax', name = 'out_detect')(fc_detect)
     #out_landmks = Dense(42, activation = 'softmax', name = 'out_landmks')(fc_landmks)
     #out_vis     = Dense(21, activation = 'sigmoid', name = 'out_vis')(fc_vis)
     #out_pose    = Dense(3, activation = 'softmax', name = 'out_pose')(fc_pose)
-    #out_gender  = Dense(1, activation = 'softmax', name = 'out_gender')(fc_gender)
+    #out_gender  = Dense(2, activation = 'softmax', name = 'out_gender')(fc_gender)
 
     model = Model(inputs = input_layer, outputs = [out_detect, out_landmks, out_vis, out_pose, out_gender])
     return model
@@ -198,37 +195,36 @@ def createParser():
 
     return args
 
+K.set_image_data_format('channels_last')
 
-if __name__ == "__main__":
+createParser()
 
-    createParser()
+if not os.path.exists(args.save_dir):
+    os.makedirs(args.save_dir)
 
-    if not os.path.exists(args.save_dir):
-        os.makedirs(args.save_dir)
+# load data
+image_size = (224, 224)
+train_regions_csv_file_name = 'regions_train.csv'
+validation_regions_csv_file_name = 'regions_validation.csv'
+path_to_image_folder = '/deepstore/datasets/dmb/Biometrics/Face/aflw/data/flickr'
 
-    # load data
-    image_size = (224, 224)
-    train_regions_csv_file_name = 'regions_train.csv'
-    validation_regions_csv_file_name = 'regions_validation.csv'
-    path_to_image_folder = '/deepstore/datasets/dmb/Biometrics/Face/aflw/data/flickr'
+train_seq = AFLWFaceRegionsSequence(
+    batch_size=args.batch_size,
+    regions_csv_file_name=train_regions_csv_file_name,
+    path_to_image_folder=path_to_image_folder,
+    image_size=image_size)
+validation_seq = AFLWFaceRegionsSequence(
+    batch_size=args.batch_size,
+    regions_csv_file_name=validation_regions_csv_file_name,
+    path_to_image_folder=path_to_image_folder,
+    image_size=image_size)
 
-    train_seq = AFLWFaceRegionsSequence(
-        batch_size=args.batch_size,
-        regions_csv_file_name=train_regions_csv_file_name,
-        path_to_image_folder=path_to_image_folder,
-        image_size=image_size)
-    validation_seq = AFLWFaceRegionsSequence(
-        batch_size=args.batch_size,
-        regions_csv_file_name=validation_regions_csv_file_name,
-        path_to_image_folder=path_to_image_folder,
-        image_size=image_size)
+# define model
+model = multi_gpu_model(ResNet101(input_shape=image_size+(3,)), gpus=2)
+model.summary()
 
-    # define model
-    model = multi_gpu_model(ResNet101(input_shape=image_size+(3,)), gpus=2)
-    model.summary()
-
-    if args.weights is not None:
-        model.load_weights(args.weights)
-        
-    if not args.testing:
-        train(model=model, train_seq=train_seq, validation_seq=validation_seq, args=args)
+if args.weights is not None:
+    model.load_weights(args.weights)
+    
+if not args.testing:
+    train(model=model, train_seq=train_seq, validation_seq=validation_seq, args=args)
