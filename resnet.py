@@ -6,7 +6,7 @@ from keras import backend as K
 from keras import callbacks
 from keras.models import Model
 from keras.layers import Conv2D, MaxPooling2D, AveragePooling2D, Input, Dense, Flatten, Activation, BatchNormalization, Add
-from keras.utils import to_categorical, multi_gpu_model
+#from keras.utils import multi_gpu_model
 
 from data_generator import AFLWFaceRegionsSequence
 from utils import plot_log
@@ -195,36 +195,38 @@ def createParser():
 
     return args
 
-K.set_image_data_format('channels_last')
+if __name__ == "__main__":
+    K.set_image_data_format('channels_last')
 
-createParser()
+    createParser()
 
-if not os.path.exists(args.save_dir):
-    os.makedirs(args.save_dir)
+    if not os.path.exists(args.save_dir):
+        os.makedirs(args.save_dir)
 
-# load data
-image_size = (224, 224)
-train_regions_csv_file_name = 'regions_train.csv'
-validation_regions_csv_file_name = 'regions_validation.csv'
-path_to_image_folder = '/deepstore/datasets/dmb/Biometrics/Face/aflw/data/flickr'
+    # load data
+    image_size = (224, 224)
+    train_regions_csv_file_name = 'regions_train.csv'
+    validation_regions_csv_file_name = 'regions_validation.csv'
+    path_to_image_folder = '/deepstore/datasets/dmb/Biometrics/Face/aflw/data/flickr'
 
-train_seq = AFLWFaceRegionsSequence(
-    batch_size=args.batch_size,
-    regions_csv_file_name=train_regions_csv_file_name,
-    path_to_image_folder=path_to_image_folder,
-    image_size=image_size)
-validation_seq = AFLWFaceRegionsSequence(
-    batch_size=args.batch_size,
-    regions_csv_file_name=validation_regions_csv_file_name,
-    path_to_image_folder=path_to_image_folder,
-    image_size=image_size)
+    train_seq = AFLWFaceRegionsSequence(
+        batch_size=args.batch_size,
+        regions_csv_file_name=train_regions_csv_file_name,
+        path_to_image_folder=path_to_image_folder,
+        image_size=image_size)
+    validation_seq = AFLWFaceRegionsSequence(
+        batch_size=args.batch_size,
+        regions_csv_file_name=validation_regions_csv_file_name,
+        path_to_image_folder=path_to_image_folder,
+        image_size=image_size)
 
-# define model
-model = multi_gpu_model(ResNet101(input_shape=image_size+(3,)), gpus=2)
-model.summary()
+    # define model
+    #model = multi_gpu_model(ResNet101(input_shape=image_size+(3,)), gpus=2)
+    model = ResNet101(input_shape=image_size+(3,))
+    model.summary()
 
-if args.weights is not None:
-    model.load_weights(args.weights)
-    
-if not args.testing:
-    train(model=model, train_seq=train_seq, validation_seq=validation_seq, args=args)
+    if args.weights is not None:
+        model.load_weights(args.weights)
+        
+    if not args.testing:
+        train(model=model, train_seq=train_seq, validation_seq=validation_seq, args=args)
