@@ -147,12 +147,6 @@ def ResNet101HyperParameters(lr):
     return optimizer, losses, loss_weights, reduce_lr
 
 def train(model, train_seq, validation_seq, args):
-    """
-    :param model: the CapsuleNet model
-    :param data: a tuple containing training and testing data, like `((x_train, y_train), (x_test, y_test))`
-    :param args: arguments
-    :return: The trained model
-    """
     # callbacks
     log = callbacks.CSVLogger(args.save_dir + '/log.csv')
     tb = callbacks.TensorBoard(
@@ -175,10 +169,10 @@ def train(model, train_seq, validation_seq, args):
         generator=train_seq,
         validation_data=validation_seq,
         epochs=args.epochs,
-        #class_weight={
-        #    0: 1,
-        #    1: 1.8669997421
-        #},
+        class_weight={
+            0: 1,
+            1: 1.8669997421
+        },
         callbacks=[log, tb, checkpoint, reduce_lr])
 
     model.save_weights(args.save_dir + '/trained_model.h5')
@@ -191,7 +185,7 @@ def createParser():
     parser = argparse.ArgumentParser(description="ResNet on AFLW.")
     parser.add_argument('--epochs', default=10, type=int)
     parser.add_argument('--batch_size', default=256, type=int)
-    parser.add_argument('--lr', default=0.001, type=float,
+    parser.add_argument('--lr', default=0.00001, type=float,
         help="Initial learning rate")
     parser.add_argument('--debug', action='store_true',
         help="Save weights by TensorBoard")
