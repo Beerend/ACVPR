@@ -17,11 +17,17 @@ def Conv1x1(filters, strides, name, inputs):
 def Conv3x3(filters, strides, name, inputs):
     Conv2D(filters=filters, kernel_size=(3, 3), strides=strides, padding='valid', use_bias=False, name=name)(inputs)
 
+def Conv7x7(filters, strides, name, inputs):
+    Conv2D(filters=filters, kernel_size=(7, 7), strides=strides, padding='valid', use_bias=False, name=name)(inputs)
+
 def Conv1x1BatchNormReLU(filters, strides, name, inputs):
     return Activation(activation='relu')(BatchNormalization()(Conv1x1(filters, strides, name, inputs)))
 
 def Conv3x3BatchNormReLU(filters, strides, name, inputs):
     return Activation(activation='relu')(BatchNormalization()(Conv3x3(filters, strides, name, inputs)))
+
+def Conv7x7BatchNormReLU(filters, strides, name, inputs):
+    return Activation(activation='relu')(BatchNormalization()(Conv7x7(filters, strides, name, inputs)))
 
 def Bottleneck(med_filters, out_filters, inputs, downsampling=False):
     strides = (1, 1)
@@ -40,7 +46,7 @@ def Bottleneck(med_filters, out_filters, inputs, downsampling=False):
 def ResNet101(input_shape):
     input_layer = Input(input_shape, name='input_tensor')
 
-    conv1       = Conv2DBatchNormReLU(64, (7, 7), (2, 2), 'valid', 'conv1', input_layer)
+    conv1       = Conv7x7BatchNormReLU(64, (2, 2), 'valid', 'conv1', input_layer)
     maxpool     = MaxPooling2D(pool_size=(3,3), strides=(2, 2), padding='valid')(conv1)
 
     conv2_1     = Bottleneck(64, 256, maxpool)
@@ -198,7 +204,7 @@ def createParser():
 if __name__ == "__main__":
     K.set_image_data_format('channels_last')
 
-    createParser()
+    args = createParser()
 
     if not os.path.exists(args.save_dir):
         os.makedirs(args.save_dir)
