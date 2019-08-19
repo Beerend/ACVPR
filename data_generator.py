@@ -40,7 +40,7 @@ class AFLWFaceRegionsSequence(Sequence):
                         image = cv.imread(os.path.join(self.path_to_image_folder,image_file_name))
                         prev_image_file_name = image_file_name
 
-                    regional_image = cv.resize(image[y:y+width,x:x+width],self.image_size)
+                    regional_image = cv.resize(image[y:y+height,x:x+width],self.image_size)
           
                     batch_x.append(regional_image)
                     batch_y.append(1 if is_face else 0)
