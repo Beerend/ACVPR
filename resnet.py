@@ -7,7 +7,7 @@ from keras import callbacks
 from keras.optimizers import RMSprop
 from keras.models import Model
 from keras.layers import Conv2D, MaxPooling2D, AveragePooling2D, Input, Dense, Flatten, Activation, BatchNormalization, Add
-#from keras.utils import multi_gpu_model
+from keras.utils import multi_gpu_model
 
 from data_generator import AFLWFaceRegionsSequence
 from utils import plot_log
@@ -226,8 +226,8 @@ if __name__ == "__main__":
         image_size=image_size)
 
     # define model
-    #model = multi_gpu_model(ResNet101(input_shape=image_size+(3,)), gpus=2)
-    model = ResNet101(input_shape=image_size+(3,))
+    model = multi_gpu_model(ResNet101(input_shape=image_size+(3,)), gpus=2)
+    #model = ResNet101(input_shape=image_size+(3,))
     model.summary()
 
     if args.weights is not None:
