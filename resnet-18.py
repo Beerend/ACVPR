@@ -55,7 +55,7 @@ def ResNet101(input_shape):
     conv2_1     = Block(64, 'conv2_1', maxpool)
     conv2_2     = Block(64, 'conv2_2', conv2_1)
 
-    convA_1     = Conv3x3(64, (2, 2), 'convA_1', conv2_3)
+    convA_1     = Conv3x3(64, (2, 2), 'convA_1', conv2_2)
     convA_2     = Conv1x1(128, (1, 1), 'convA_2', convA_1)
 
     conv3_1     = Block(128, 'conv3_1', conv2_2, True)
@@ -66,7 +66,7 @@ def ResNet101(input_shape):
     convB_2     = Conv1x1(256, (1, 1), 'convB_2', convB_1)
 
     conv4_1     = Block(256, 'conv4_1', conv3_2, True)
-    conv4_2     = Bottleneck(256, 'conv4_2', conv4_1)
+    conv4_2     = Block(256, 'conv4_2', conv4_1)
 
     C_0         = Add()([conv4_2, convB_2])
     convC_1     = Conv3x3(256, (2, 2), 'convC_1', C_0)
