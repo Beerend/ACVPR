@@ -5,11 +5,12 @@ import cv2 as cv
 from keras.utils import Sequence,to_categorical
 
 class AFLWFaceRegionsSequence(Sequence):
-    def __init__(self, batch_size, regions_csv_file_name, path_to_image_folder, image_size):
+    def __init__(self, batch_size, regions_csv_file_name, path_to_image_folder, image_size, rotate=None):
         self.regions_csv_file_name = regions_csv_file_name
         self.batch_size = batch_size
         self.path_to_image_folder = path_to_image_folder
         self.image_size = image_size
+        self.rotate = rotate
 
     def __len__(self):
         with open(self.regions_csv_file_name) as f:
@@ -41,6 +42,8 @@ class AFLWFaceRegionsSequence(Sequence):
                         prev_image_file_name = image_file_name
 
                     regional_image = cv.resize(image[y:y+height,x:x+width],self.image_size)
+                    if self.rotate is not None:
+                        regional_image = cv.rotate(regional_image, self.rotate)
           
                     batch_x.append(regional_image)
                     batch_y.append(1 if is_face else 0)
