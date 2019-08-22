@@ -25,6 +25,9 @@ from keras import backend as K
 from keras.utils import to_categorical, multi_gpu_model
 import matplotlib.pyplot as plt
 from data_generator import AFLWFaceRegionsSequence
+import cv2 as cv
+from sklearn.metrics import precision_recall_curve,roc_curve
+import csv
 
 K.set_image_data_format('channels_last')
 
@@ -94,6 +97,30 @@ def train(model, train_seq, validation_seq, args):
 
     return model
 
+def test(model,seq, args, seq_name):
+    y_pred = []
+    y_test = []
+    for x,y in seq:
+        y_pred.extend(model.predict_on_batch(x))
+        y_test.extend(y)
+    y_pred = np.array(y_pred)
+    y_test = np.array(y_test)
+    print('acc', np.sum(np.argmax(y_pred, 1) == np.argmax(y_test, 1)) / y_test.shape[0])
+
+    fpr, tpr, thresholds = roc_curve(y_test[:,1], y_pred[:,1])
+    with open(os.path.join(args.save_dir,seq_name) + '_roc.csv','w') as out:
+        w = csv.writer(out)
+        w.writerow(['fpr','tpr'])
+        for i,_ in enumerate(fpr):
+            w.writerow([fpr[i],tpr[i]])
+
+    precision, recall, thresholds = precision_recall_curve(y_test[:,1], y_pred[:,1])
+    with open(os.path.join(args.save_dir,seq_name) + '_pr.csv','w') as out:
+        w = csv.writer(out)
+        w.writerow(['precision','recall'])
+        for i,_ in enumerate(precision):
+            w.writerow([precision[i],recall[i]])
+
 
 if __name__ == "__main__":
     import os
@@ -152,20 +179,7 @@ if __name__ == "__main__":
 
     # load data
     image_size = (224, 224)
-    train_regions_csv_file_name = 'regions_train.csv'
-    validation_regions_csv_file_name = 'regions_validation.csv'
     path_to_image_folder = '/deepstore/datasets/dmb/Biometrics/Face/aflw/data/flickr'
-
-    train_seq = AFLWFaceRegionsSequence(
-        batch_size=args.batch_size,
-        regions_csv_file_name=train_regions_csv_file_name,
-        path_to_image_folder=path_to_image_folder,
-        image_size=image_size)
-    validation_seq = AFLWFaceRegionsSequence(
-        batch_size=args.batch_size,
-        regions_csv_file_name=validation_regions_csv_file_name,
-        path_to_image_folder=path_to_image_folder,
-        image_size=image_size)
 
     # define model
     model = multi_gpu_model(Baseline(input_shape=image_size+(3,),num_classes=2), gpus=2)
@@ -175,8 +189,51 @@ if __name__ == "__main__":
     if args.weights is not None:  # init the model weights with provided one
         model.load_weights(args.weights)
     if not args.testing:
+        train_regions_csv_file_name = 'regions_train.csv'
+        validation_regions_csv_file_name = 'regions_validation.csv'
+        train_seq = AFLWFaceRegionsSequence(
+            batch_size=args.batch_size,
+            regions_csv_file_name=train_regions_csv_file_name,
+            path_to_image_folder=path_to_image_folder,
+            image_size=image_size)
+        validation_seq = AFLWFaceRegionsSequence(
+            batch_size=args.batch_size,
+            regions_csv_file_name=validation_regions_csv_file_name,
+            path_to_image_folder=path_to_image_folder,
+            image_size=image_size)
         train(
             model=model,
             train_seq=train_seq,
             validation_seq=validation_seq,
             args=args)
+    else:  # as long as weights are given, will run testing
+        if args.weights is None:
+            print('No weights are provided. Will test using random initialized weights.')
+        test_regions_csv_file_name = 'regions_validation.csv'
+        test_seq = AFLWFaceRegionsSequence(
+            batch_size=args.batch_size,
+            regions_csv_file_name=test_regions_csv_file_name,
+            path_to_image_folder=path_to_image_folder,
+            image_size=image_size)
+        test_seq_90_cw = AFLWFaceRegionsSequence(
+            batch_size=args.batch_size,
+            regions_csv_file_name=test_regions_csv_file_name,
+            path_to_image_folder=path_to_image_folder,
+            image_size=image_size,
+            rotate=cv.ROTATE_90_CLOCKWISE)
+        test_seq_90_ccw = AFLWFaceRegionsSequence(
+            batch_size=args.batch_size,
+            regions_csv_file_name=test_regions_csv_file_name,
+            path_to_image_folder=path_to_image_folder,
+            image_size=image_size,
+            rotate=cv.ROTATE_90_COUNTERCLOCKWISE)
+        test_seq_180 = AFLWFaceRegionsSequence(
+            batch_size=args.batch_size,
+            regions_csv_file_name=test_regions_csv_file_name,
+            path_to_image_folder=path_to_image_folder,
+            image_size=image_size,
+            rotate=cv.ROTATE_180)
+        acc_normal = test(model=model, seq=test_seq, args=args, seq_name='normal')
+        acc_90_cw = test(model=model, seq=test_seq_90_cw, args=args, seq_name='90_cw')
+        acc_90_ccw = test(model=model, seq=test_seq_90_ccw, args=args, seq_name='90_ccw')
+        acc_180 = test(model=model, seq=test_seq_180, args=args, seq_name='180')
